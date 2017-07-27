@@ -166,7 +166,7 @@ public class CompilationBuilder {
 				};
 			}
 			
-			try (AppendableFile f = new AppendableFile(new File(ALL_PKG, fileMode));
+			try (ACFile f = new ACFile(openFile(ALL_PKG, fileMode));
 					OutputStream os = f.f.asOutputStream();
 					) {
 				if (fileMode == File.READ_WRITE) {
@@ -182,17 +182,22 @@ public class CompilationBuilder {
 		return ret;
 	}
 	
-	private static class AppendableFile implements Closeable {
+	private File openFile(String fileName, int fileMode) throws totalcross.io.IOException {
+		File f = new File(fileName, fileMode);
+		
+		if (fileMode == File.READ_WRITE && f.getSize() != 0) {
+			f.setPos(0, RandomAccessStream.SEEK_END);
+		}
+		return f;
+	}
+
+	private static class ACFile implements Closeable {
 		final File f;
 		
-		AppendableFile(File f) throws IOException {
+		ACFile(File f) {
 			this.f = f;
-			try {
-				f.setPos(0, RandomAccessStream.SEEK_END);
-			} catch (totalcross.io.IOException e) {
-				throw new IOException(e);
-			}
 		}
+		
 		@Override
 		public void close() throws IOException {
 			try {
