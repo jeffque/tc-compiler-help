@@ -144,6 +144,9 @@ public class CompilationBuilder {
 	
 	private Closeable manageAllPkg() throws IOException {
 		Closeable ret = () -> {};
+		if (!mustOverwriteAllPkg()) {
+			return ret;
+		}
 		try {
 			int fileMode = File.CREATE_EMPTY;
 			if (new File(ALL_PKG, File.DONT_OPEN).exists()) {
@@ -182,6 +185,10 @@ public class CompilationBuilder {
 		return ret;
 	}
 	
+	private boolean mustOverwriteAllPkg() {
+		return depsPathGenerated.size() != 0;
+	}
+
 	private File openFile(String fileName, int fileMode) throws totalcross.io.IOException {
 		File f = new File(fileName, fileMode);
 		
