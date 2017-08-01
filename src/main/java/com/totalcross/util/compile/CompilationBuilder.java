@@ -32,6 +32,12 @@ public class CompilationBuilder {
 	private String mainTargetPath;
 	private Predicate<String> mustCompile = (p) -> false;
 	private List<AvailablePlatforms> platformsToBuild = new ArrayList<>();
+	private boolean isSinglePackage;
+	private String execName;
+	private String cmd;
+	private String execOutputDirectory;
+	private String depsOutputDirectory;
+	private String mobileprovisionPath;
 	
 	private Boolean isWindows = null;
 	private List<String> classPathList = null;
@@ -58,6 +64,14 @@ public class CompilationBuilder {
 	public CompilationBuilder addArgs(String... newArgs) {
 		for (String arg: newArgs) {
 			args.add(arg);
+		}
+		
+		return addArgs(args, newArgs);
+	}
+	
+	public CompilationBuilder addArgs(List<String> argList, String... newArgs) {
+		for (String arg: newArgs) {
+			argList.add(arg);
 		}
 		
 		return this;
@@ -118,19 +132,38 @@ public class CompilationBuilder {
 	}
 	
 	public CompilationBuilder setName(String name) {
-		return addArgs("/n", name);
+		return setExecName(name);
+	}
+	
+	public CompilationBuilder setExecName(String execName) {
+		this.execName = execName;
+		return this;
 	}
 	
 	public CompilationBuilder setOutputDirectory(String outputDirectory) {
-		return addArgs("/o", outputDirectory);
+		setExecOutputDirectory(outputDirectory);
+		setDepsOutputDirectory(outputDirectory);
+		return this;
+	}
+	
+	public CompilationBuilder setExecOutputDirectory(String execOutputDirectory) {
+		this.execOutputDirectory = execOutputDirectory;
+		return this;
+	}
+	
+	public CompilationBuilder setDepsOutputDirectory(String depsOutputDirectory) {
+		this.depsOutputDirectory = depsOutputDirectory;
+		return this;
 	}
 	
 	public CompilationBuilder setCommand(String cmd) {
-		return addArgs("/c", cmd);
+		this.cmd = cmd;
+		return this;
 	}
 	
 	public CompilationBuilder setMobileprovisionPath(String mobileprovisionPath) {
-		return addArgs("/m", mobileprovisionPath);
+		this.mobileprovisionPath = mobileprovisionPath;
+		return this;
 	}
 	
 	public CompilationBuilder addPlatformsTarget(AvailablePlatforms... platformsTarget) {
@@ -139,14 +172,48 @@ public class CompilationBuilder {
 		}
 		return this;
 	}
+	
+	public CompilationBuilder setPlatformsTarget(AvailablePlatforms... platformsTarget) {
+		resetPlatformsTarget();
+		return addPlatformsTarget(platformsTarget);
+	}
+	
+	public CompilationBuilder resetPlatformsTarget() {
+		platformsToBuild.clear();
+		return this;
+	}
 
 	public CompilationBuilder callDeploy(String target, List<String> platforms) throws IOException, InterruptedException {
 		try (Closeable c = manageAllPkg()) {
-			innerCallDeploy(target, args, platforms);
+			innerCallDeploy(target, getArgsToExec(), platforms);
 			return this;
 		}
 	}
 	
+	private List<String> getArgsToExec() {
+		List<String> newArgs = new ArrayList<>();
+		for (String arg: args) {
+			newArgs.add(arg);
+		}
+		if (isSinglePackage) {
+			addArgs(newArgs, "/p");
+		}
+		
+		if (execName != null) {
+			addArgs(newArgs, "/n", execName);
+		}
+		if (cmd != null) {
+			addArgs(newArgs, "/c", cmd);
+		}
+		if (execOutputDirectory != null) {
+			addArgs(newArgs, "/o", execOutputDirectory);
+		}
+		if (mobileprovisionPath != null) {
+			addArgs(newArgs, "/m", mobileprovisionPath);
+		}
+		return newArgs;
+	}
+
 	private static final String ALL_PKG = "all.pkg";
 	private static final String ALL_PKG_BKP = ALL_PKG + "-bkp";
 	
@@ -232,13 +299,7 @@ public class CompilationBuilder {
 		
 		List<String> cmdLine = new ArrayList<>();
 		
-		cmdLine.add("java");
-		cmdLine.add("-cp");
-		cmdLine.add(classpath);
-		cmdLine.add("tc.Deploy");
-		cmdLine.add(target);
-		cmdLine.add("/r");
-		cmdLine.add(key);
+		addArgs(cmdLine, "java", "-cp", classpath, "tc.Deploy", target, "/r", key);
 		
 		for (String platform: platforms) {
 			cmdLine.add("-" + platform);
@@ -273,6 +334,11 @@ public class CompilationBuilder {
 		}
 		newArgs.add("/n");
 		newArgs.add(getDepTczName(tczName));
+		
+		if (depsOutputDirectory != null) {
+			newArgs.add("/o");
+			newArgs.add(depsOutputDirectory);
+		}
 		return newArgs;
 	}
 
@@ -320,6 +386,16 @@ public class CompilationBuilder {
 	}
 
 	public CompilationBuilder singlePackage() {
-		return addArgs("/p");
+		return singlePackage(true);
+	}
+
+	public CompilationBuilder singlePackage(boolean isSinglePackage) {
+		this.isSinglePackage = isSinglePackage;
+		return this;
+	}
+
+	public CompilationBuilder resetArgs() {
+		args.clear();
+		return this;
 	}
 }
