@@ -17,6 +17,10 @@ import totalcross.io.RandomAccessStream;
 import totalcross.ui.MainWindow;
 
 public class CompilationBuilder {
+	public static String toTczLibName(String jarName) {
+		return jarName.replaceFirst("\\.jar$", "Lib.tcz");
+	}
+	
 	private String key;
 	private String totalcrossHome;
 	private List<String> args = new ArrayList<>();
@@ -249,10 +253,6 @@ public class CompilationBuilder {
 		}
 		Process process = builder.start();
 		process.waitFor();
-	}
-	
-	private String toTczLibName(String jarName) {
-		return jarName.replaceFirst("\\.jar$", "Lib.tcz");
 	}
 	
 	private void generateTcz(String target) throws IOException, InterruptedException {
