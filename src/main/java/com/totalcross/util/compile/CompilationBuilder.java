@@ -21,6 +21,10 @@ public class CompilationBuilder {
 		return jarName.replaceFirst("\\.jar$", "Lib.tcz");
 	}
 	
+	public static String getDepTczName(String tczName) {
+		return tczName.replaceAll("^.*[/\\\\]([^/\\\\]*Lib.tcz)$", "$1");
+	}
+	
 	private String key;
 	private String totalcrossHome;
 	private List<String> args = new ArrayList<>();
@@ -268,7 +272,7 @@ public class CompilationBuilder {
 			newArgs.add(arg);
 		}
 		newArgs.add("/n");
-		newArgs.add(tczName.replaceAll("^.*[/\\\\]([^/\\\\]*Lib.tcz)$", "$1"));
+		newArgs.add(getDepTczName(tczName));
 		return newArgs;
 	}
 
