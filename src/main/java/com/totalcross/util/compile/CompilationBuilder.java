@@ -222,30 +222,25 @@ public class CompilationBuilder {
 		if (!mustOverwriteAllPkg()) {
 			return ret;
 		}
-		try {
+		try (File testExists = new File(ALL_PKG, File.DONT_OPEN)) {
 			int fileMode = File.CREATE_EMPTY;
-			if (new File(ALL_PKG, File.DONT_OPEN).exists()) {
+			
+			if (testExists.exists()) {
 				fileMode = File.READ_WRITE;
 				File.copy(ALL_PKG, ALL_PKG_BKP);
 				ret = () -> {
-					try {
-						File.move(ALL_PKG_BKP, ALL_PKG);
-					} catch (totalcross.io.IOException e) {
-						throw new IOException(e);
-					}
+					File.move(ALL_PKG_BKP, ALL_PKG);
 				};
 			} else {
 				ret = () -> {
-					try {
-						new File(ALL_PKG, File.DONT_OPEN).delete();
-					} catch (totalcross.io.IOException e) {
-						throw new IOException(e);
+					try (File f = new File(ALL_PKG, File.DONT_OPEN)) {
+						f.delete();
 					}
 				};
 			}
 			
-			try (ACFile f = new ACFile(openFile(ALL_PKG, fileMode));
-					OutputStream os = f.f.asOutputStream();
+			try (File f = openFile(ALL_PKG, fileMode);
+					OutputStream os = f.asOutputStream();
 					) {
 				if (fileMode == File.READ_WRITE) {
 					os.write('\n');
@@ -254,8 +249,6 @@ public class CompilationBuilder {
 					os.write(("[L] " + depsGenerated + "\n").getBytes());
 				}
 			}
-		} catch (totalcross.io.IOException e) {
-			throw new IOException(e);
 		}
 		return ret;
 	}
@@ -264,31 +257,13 @@ public class CompilationBuilder {
 		return depsPathGenerated.size() != 0;
 	}
 
-	private File openFile(String fileName, int fileMode) throws totalcross.io.IOException {
+	private File openFile(String fileName, int fileMode) throws IOException {
 		File f = new File(fileName, fileMode);
 		
 		if (fileMode == File.READ_WRITE && f.getSize() != 0) {
 			f.setPos(0, RandomAccessStream.SEEK_END);
 		}
 		return f;
-	}
-
-	private static class ACFile implements Closeable {
-		final File f;
-		
-		ACFile(File f) {
-			this.f = f;
-		}
-		
-		@Override
-		public void close() throws IOException {
-			try {
-				f.close();
-			} catch (totalcross.io.IOException e) {
-				throw new IOException(e);
-			}
-		}
-		
 	}
 
 	private void innerCallDeploy(String target, List<String> args, List<String> platforms) throws IOException, InterruptedException {
